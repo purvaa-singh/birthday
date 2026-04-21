@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const moodToggle = document.getElementById('mood-toggle');
     if (moodToggle) {
         const savedMood = localStorage.getItem('loveMood');
-        if (savedMood !== 'false') {
+        if (savedMood === 'true') {
             document.body.classList.add('love-mood');
         } else {
             document.body.classList.remove('love-mood');
