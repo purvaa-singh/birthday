@@ -602,13 +602,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         // ═══════════════════════════════════════════
-        // 6. FLOATING REPULSION GALLERY (Best of Purva)
+        // 6. SCRAPBOOK GALLERY (Best of Purva)
         // ═══════════════════════════════════════════
-        const floatCanvas = document.getElementById('float-canvas');
-        if (floatCanvas) {
-            const floatItems = document.querySelectorAll('.float-img');
-            const canvasRect = () => floatCanvas.getBoundingClientRect();
-
+        const scrapbookGallery = document.getElementById('scrapbook-gallery');
+        if (scrapbookGallery) {
             // Animate hero text
             const floatTitle = document.querySelector('.float-hero-title');
             const floatDesc = document.querySelector('.float-hero-desc');
@@ -620,272 +617,31 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (floatDesc) ftl.to(floatDesc, { opacity: 1, y: 0, duration: 1.2, ease: 'power3.out' }, '-=0.8');
             }
 
-            // Mouse tracking
-            let mouseX = -9999;
-            let mouseY = -9999;
-            let mouseInCanvas = false;
-
-            floatCanvas.addEventListener('mousemove', (e) => {
-                mouseX = e.clientX;
-                mouseY = e.clientY;
-                mouseInCanvas = true;
-            });
-            floatCanvas.addEventListener('mouseleave', () => {
-                mouseInCanvas = false;
-            });
-
-            // Physics constants
-            const REPEL_RADIUS = 150;    // reduced radius as requested
-            const REPEL_STRENGTH = 0.45; // balanced for the slower overall motion
-            const DAMPING = 0.95;        // smoother glide than 0.92
-
-            // Initialize each floating image with physics state
-            const particles = [];
-            const cw = () => floatCanvas.clientWidth;
-            const ch = () => floatCanvas.clientHeight;
-
-            // Scatter images across the canvas in a nice spread
-            const cols = 4;
-            const rows = Math.ceil(floatItems.length / cols);
-
-            floatItems.forEach((item, i) => {
-                const col = i % cols;
-                const row = Math.floor(i / cols);
-                const imgW = item.clientWidth || 200;
-                const imgH = imgW * (4 / 3);
-
-                // Spread evenly with some randomness
-                const cellW = cw() / cols;
-                const cellH = ch() / rows;
-                const baseX = cellW * col + cellW * 0.1 + Math.random() * cellW * 0.5;
-                const baseY = cellH * row + cellH * 0.1 + Math.random() * cellH * 0.4;
-
-                const p = {
-                    el: item,
-                    x: Math.max(20, Math.min(baseX, cw() - imgW - 20)),
-                    y: Math.max(20, Math.min(baseY, ch() - imgH - 20)),
-                    vx: 0,
-                    vy: 0,
-                    w: imgW,
-                    h: imgH,
-                    // Ambient drift — barely perceptible
-                    driftPhaseX: Math.random() * Math.PI * 2,
-                    driftPhaseY: Math.random() * Math.PI * 2,
-                    driftAmpX: 0.006,
-                    driftAmpY: 0.005,
-                    driftFreqX: 0.0008,
-                    driftFreqY: 0.0007,
-                    driftSpeed: 0.1,
-                    // Rotation & scale breathing — very subtle
-                    rotPhase: Math.random() * Math.PI * 2,
-                    rotAmp: 1.2,
-                    rotFreq: 0.005,
-                    scalePhase: Math.random() * Math.PI * 2,
-                    scaleFreq: 0.004,
-                    scaleAmp: 0.01,
-                };
-
-                particles.push(p);
-
-                // Staggered fade-in
-                gsap.to(item, {
+            // Animate polaroid cards in on scroll
+            const cards = document.querySelectorAll('.polaroid-card');
+            cards.forEach((card, i) => {
+                gsap.to(card, {
+                    scrollTrigger: {
+                        trigger: scrapbookGallery,
+                        start: 'top 85%',
+                    },
                     opacity: 1,
-                    duration: 1.8,
-                    delay: 0.6 + i * 0.15,
-                    ease: 'power2.out'
+                    y: 0,
+                    duration: 1.2,
+                    delay: i * 0.1,
+                    ease: 'power3.out'
                 });
-            });
 
-            let time = 0;
-
-            // Main physics loop
-            gsap.ticker.add(() => {
-                if (isModalOpen) return;
-                time++;
-
-                const bounds = canvasRect();
-
-                particles.forEach(p => {
-                    // 1. Ambient floating drift (very gentle sinusoidal)
-                    const driftX = Math.sin(time * p.driftFreqX + p.driftPhaseX) * p.driftAmpX * p.driftSpeed;
-                    const driftY = Math.cos(time * p.driftFreqY + p.driftPhaseY) * p.driftAmpY * p.driftSpeed;
-
-                    p.vx += driftX;
-                    p.vy += driftY;
-
-                    // 2. Cursor repulsion — push AWAY from cursor
-                    if (mouseInCanvas) {
-                        const imgCenterX = bounds.left + p.x + p.w / 2;
-                        const imgCenterY = bounds.top + p.y + p.h / 2;
-
-                        const dx = imgCenterX - mouseX;
-                        const dy = imgCenterY - mouseY;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-
-                        if (dist < REPEL_RADIUS && dist > 1) {
-                            const proximity = 1 - (dist / REPEL_RADIUS);
-                            const force = proximity * proximity * REPEL_STRENGTH;
-
-                            p.vx += (dx / dist) * force;
-                            p.vy += (dy / dist) * force;
+                // Image click → open modal
+                const img = card.querySelector('img');
+                if (img) {
+                    img.addEventListener('click', () => {
+                        if (window.openModal) {
+                            window.openModal(img);
                         }
-                    }
-
-                    // 3. Apply velocity with damping
-                    p.vx *= DAMPING;
-                    p.vy *= DAMPING;
-
-                    p.x += p.vx;
-                    p.y += p.vy;
-
-                    // 4. Boundary clamping (soft bounce)
-                    const padding = 10;
-                    const maxX = cw() - p.w - padding;
-                    const maxY = ch() - p.h - padding;
-
-                    if (p.x < padding) { p.x = padding; p.vx *= -0.3; }
-                    if (p.x > maxX) { p.x = maxX; p.vx *= -0.3; }
-                    if (p.y < padding) { p.y = padding; p.vy *= -0.3; }
-                    if (p.y > maxY) { p.y = maxY; p.vy *= -0.3; }
-
-                    // 5. Gentle rotation sway + scale breathing
-                    const rot = Math.sin(time * p.rotFreq + p.rotPhase) * p.rotAmp;
-                    const scl = 1 + Math.sin(time * p.scaleFreq + p.scalePhase) * p.scaleAmp;
-
-                    // 6. Apply position + rotation + scale
-                    gsap.set(p.el, {
-                        x: p.x,
-                        y: p.y,
-                        rotation: rot,
-                        scale: scl
                     });
-                });
+                }
             });
-
-            // Image click → open modal
-            floatItems.forEach(item => {
-                const img = item.querySelector('img');
-                if (!img) return;
-                img.addEventListener('click', () => {
-                    if (isPopupAnimating) return;
-                    isPopupAnimating = true;
-                    activeImg = img;
-                    isModalOpen = true;
-                    if (lenis) lenis.stop();
-
-                    const rect = img.getBoundingClientRect();
-                    modalImg.src = img.src;
-                    gsap.set(modalImg, {
-                        position: 'fixed', left: 0, top: 0,
-                        x: rect.left, y: rect.top,
-                        width: rect.width, height: rect.height,
-                        objectFit: 'cover', borderRadius: '0px', zIndex: 101, boxShadow: 'none'
-                    });
-
-                    modalOverlay.style.pointerEvents = 'auto';
-
-                    const tw = window.innerWidth * 0.85;
-                    const th = window.innerHeight * 0.85;
-                    const imgAspect = rect.width / rect.height;
-                    const winAspect = tw / th;
-                    let fw, fh;
-                    if (imgAspect > winAspect) { fw = tw; fh = tw / imgAspect; }
-                    else { fh = th; fw = th * imgAspect; }
-                    const fx = (window.innerWidth - fw) / 2;
-                    const fy = (window.innerHeight - fh) / 2;
-
-                    const tl = gsap.timeline({ onComplete: () => isPopupAnimating = false });
-                    tl.to(modalOverlay, { opacity: 1, duration: 0.25, ease: 'power2.out' })
-                      .to(modalImg, {
-                          x: fx, y: fy, width: fw, height: fh,
-                          borderRadius: '6px', boxShadow: '0 0 60px rgba(0,0,0,0.8)',
-                          duration: 0.6, ease: 'expo.out'
-                      }, '-=0.2');
-                });
-            });
-
-            // --- View All Overlay ---
-            const viewAllBtn = document.getElementById('view-all-btn');
-            const viewAllOverlay = document.getElementById('view-all-overlay');
-            const viewAllClose = document.getElementById('view-all-close');
-            const viewAllItems = document.querySelectorAll('.view-all-item');
-
-            if (viewAllBtn && viewAllOverlay) {
-                viewAllBtn.addEventListener('click', () => {
-                    viewAllOverlay.classList.add('active');
-                    if (lenis) lenis.stop();
-
-                    // Staggered reveal of grid items
-                    viewAllItems.forEach((item, i) => {
-                        gsap.to(item, {
-                            opacity: 1,
-                            y: 0,
-                            duration: 0.8,
-                            delay: i * 0.06,
-                            ease: 'power3.out'
-                        });
-                    });
-                });
-
-                const closeViewAll = () => {
-                    viewAllOverlay.classList.remove('active');
-                    if (lenis) lenis.start();
-                    // Reset items for next open
-                    viewAllItems.forEach(item => {
-                        gsap.set(item, { opacity: 0, y: 20 });
-                    });
-                };
-
-                viewAllClose.addEventListener('click', closeViewAll);
-
-                // Close on overlay background click
-                viewAllOverlay.addEventListener('click', (e) => {
-                    if (e.target === viewAllOverlay) closeViewAll();
-                });
-
-                // Image click in grid → open modal
-                viewAllItems.forEach(item => {
-                    const img = item.querySelector('img');
-                    if (!img) return;
-                    img.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (isPopupAnimating) return;
-                        isPopupAnimating = true;
-                        activeImg = img;
-                        isModalOpen = true;
-
-                        const rect = img.getBoundingClientRect();
-                        modalImg.src = img.src;
-                        gsap.set(modalImg, {
-                            position: 'fixed', left: 0, top: 0,
-                            x: rect.left, y: rect.top,
-                            width: rect.width, height: rect.height,
-                            objectFit: 'cover', borderRadius: '0px', zIndex: 201, boxShadow: 'none'
-                        });
-
-                        modalOverlay.style.pointerEvents = 'auto';
-                        modalOverlay.style.zIndex = '200';
-
-                        const tw = window.innerWidth * 0.85;
-                        const th = window.innerHeight * 0.85;
-                        const imgAspect = rect.width / rect.height;
-                        const winAspect = tw / th;
-                        let fw2, fh2;
-                        if (imgAspect > winAspect) { fw2 = tw; fh2 = tw / imgAspect; }
-                        else { fh2 = th; fw2 = th * imgAspect; }
-                        const fx2 = (window.innerWidth - fw2) / 2;
-                        const fy2 = (window.innerHeight - fh2) / 2;
-
-                        const tl2 = gsap.timeline({ onComplete: () => isPopupAnimating = false });
-                        tl2.to(modalOverlay, { opacity: 1, duration: 0.25, ease: 'power2.out' })
-                           .to(modalImg, {
-                               x: fx2, y: fy2, width: fw2, height: fh2,
-                               borderRadius: '6px', boxShadow: '0 0 60px rgba(0,0,0,0.8)',
-                               duration: 0.6, ease: 'expo.out'
-                           }, '-=0.2');
-                    });
-                });
-            }
         }
 
     } // end startAnimations
