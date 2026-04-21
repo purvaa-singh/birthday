@@ -918,7 +918,8 @@ body.love-mood .mood-btn, body.love-mood .music-btn {
 
 .polaroid-card {
     background: #ffffff;
-    padding: 1rem 1rem 3.8rem 1rem;
+    padding: 1rem;
+    padding-bottom: 0;
     border-radius: 4px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0,0,0,0.2);
     position: relative;
@@ -983,10 +984,16 @@ body.love-mood .polaroid-card:hover {
     color: #444;
     font-size: 1.1rem;
     font-style: italic;
-    position: absolute;
-    bottom: 1.3rem;
+    position: relative;
+    width: 100%;
     text-align: center;
-    width: calc(100% - 2rem);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.8rem;
+    margin-top: 0.8rem;
+    margin-bottom: 1.2rem;
+    padding: 0 0.5rem;
     opacity: 0;
     transform: translateY(8px);
     transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
