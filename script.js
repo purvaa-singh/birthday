@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ═══════════════════════════════════════════
-    // 1.5. MOOD TOGGLE (Love Mood)
+    // 1.5. MOOD TOGGLE (Love Mood) & HEART SPRINKLER
     // ═══════════════════════════════════════════
     const moodToggle = document.getElementById('mood-toggle');
     if (moodToggle) {
@@ -85,13 +85,112 @@ document.addEventListener("DOMContentLoaded", () => {
             document.body.classList.remove('love-mood');
         }
 
-        moodToggle.addEventListener('click', () => {
+        const icon = moodToggle.querySelector('.mood-icon');
+        if (icon && document.body.classList.contains('love-mood')) {
+            icon.style.fill = 'var(--accent)';
+        }
+
+        let sprinklerTimeout;
+        let sprinklerInterval;
+        let isLongPress = false;
+
+        let heartContainer = document.getElementById('heart-container');
+        if (!heartContainer) {
+            heartContainer = document.createElement('div');
+            heartContainer.id = 'heart-container';
+            heartContainer.style.position = 'fixed';
+            heartContainer.style.top = '0';
+            heartContainer.style.left = '0';
+            heartContainer.style.width = '100vw';
+            heartContainer.style.height = '100vh';
+            heartContainer.style.pointerEvents = 'none';
+            heartContainer.style.zIndex = '9999';
+            heartContainer.style.overflow = 'hidden';
+            document.body.appendChild(heartContainer);
+        }
+
+        const maxHearts = 150;
+        let currentHearts = 0;
+
+        function spawnHeart() {
+            if (currentHearts >= maxHearts) return;
+
+            const rect = moodToggle.getBoundingClientRect();
+            const startX = rect.left + rect.width / 2;
+            const startY = rect.top + rect.height / 2;
+
+            const heart = document.createElement('div');
+            heart.classList.add('sprinkler-heart');
+            heart.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>`;
+            
+            const isLoveMood = document.body.classList.contains('love-mood');
+            const heartColor = isLoveMood ? 'var(--accent)' : 'var(--text-secondary)';
+
+            const angle = Math.random() * Math.PI * 2;
+            const size = 0.4 + Math.random() * 0.8;
+            const rot = Math.random() * 360;
+
+            // Explosion all over the screen: 
+            // Maximum possible distance to corner is around max innerWidth/innerHeight
+            const maxDistance = Math.max(window.innerWidth, window.innerHeight) * 1.2;
+            const distance = 150 + Math.random() * maxDistance;
+
+            // To maintain a similar physics feel (velocity), duration is calculated based on distance.
+            // A speed between 150px/sec and 300px/sec will feel natural and consistent.
+            const speed = 150 + Math.random() * 150;
+            const dur = distance / speed;
+
+            gsap.set(heart, {
+                x: startX - 12,
+                y: startY - 12,
+                scale: size * 0.5,
+                rotation: rot,
+                opacity: 1,
+                color: heartColor,
+                position: 'absolute',
+                transformOrigin: '50% 50%',
+                filter: 'drop-shadow(0px 0px 4px rgba(0,0,0,0.1))'
+            });
+
+            heartContainer.appendChild(heart);
+            currentHearts++;
+
+            gsap.to(heart, {
+                x: startX + Math.cos(angle) * distance,
+                y: startY + Math.sin(angle) * distance - (Math.random() * distance * 0.3), // A little upward float bias
+                rotation: rot + (Math.random() - 0.5) * 720, // More rotation for longer flights
+                opacity: 0,
+                scale: size * 1.5,
+                duration: dur,
+                ease: "power2.out",
+                onComplete: () => {
+                    if (heart.parentNode) heart.parentNode.removeChild(heart);
+                    currentHearts--;
+                }
+            });
+        }
+
+        const startSprinkler = () => {
+            isLongPress = true;
+            spawnHeart();
+            sprinklerInterval = setInterval(spawnHeart, 50); // ~20 hearts/sec
+        };
+
+        const stopSprinkler = () => {
+            clearTimeout(sprinklerTimeout);
+            if (sprinklerInterval) {
+                clearInterval(sprinklerInterval);
+                sprinklerInterval = null;
+            }
+        };
+
+        const toggleTheme = () => {
             document.body.classList.toggle('love-mood');
             const isLoveMood = document.body.classList.contains('love-mood');
             localStorage.setItem('loveMood', isLoveMood);
             
-            // Add a small bounce animation to the icon
-            const icon = moodToggle.querySelector('.mood-icon');
             if (icon) {
                 gsap.fromTo(icon, 
                     { scale: 0.8 }, 
@@ -103,13 +202,35 @@ document.addEventListener("DOMContentLoaded", () => {
                     gsap.to(icon, { fill: 'none', duration: 0.3 });
                 }
             }
-        });
+        };
 
-        // Initialize icon fill state
-        const icon = moodToggle.querySelector('.mood-icon');
-        if (icon && document.body.classList.contains('love-mood')) {
-            icon.style.fill = 'var(--accent)';
-        }
+        const handlePointerDown = (e) => {
+            if (e.type === 'mousedown' && e.button !== 0) return;
+            isLongPress = false;
+            sprinklerTimeout = setTimeout(startSprinkler, 200);
+        };
+
+        const handlePointerUpOrLeave = () => {
+            stopSprinkler();
+        };
+
+        // Pointer events for desktop and mobile
+        moodToggle.addEventListener('mousedown', handlePointerDown);
+        moodToggle.addEventListener('touchstart', handlePointerDown, { passive: true });
+
+        moodToggle.addEventListener('mouseup', handlePointerUpOrLeave);
+        moodToggle.addEventListener('mouseleave', handlePointerUpOrLeave);
+        moodToggle.addEventListener('touchend', handlePointerUpOrLeave);
+        moodToggle.addEventListener('touchcancel', handlePointerUpOrLeave);
+
+        moodToggle.addEventListener('click', (e) => {
+            if (isLongPress) {
+                e.preventDefault();
+                e.stopPropagation();
+            } else {
+                toggleTheme();
+            }
+        });
     }
 
     // ═══════════════════════════════════════════
