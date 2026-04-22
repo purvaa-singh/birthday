@@ -109,7 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
             document.body.appendChild(heartContainer);
         }
 
-        const maxHearts = 150;
+        const maxHearts = 250;
         let currentHearts = 0;
 
         function spawnHeart() {
@@ -128,17 +128,21 @@ document.addEventListener("DOMContentLoaded", () => {
             const isLoveMood = document.body.classList.contains('love-mood');
             const heartColor = isLoveMood ? 'var(--accent)' : 'var(--text-secondary)';
 
-            const angle = Math.random() * Math.PI * 2;
+            let angle;
+            // 75% bias towards top-left / center of screen from bottom-right corner 
+            if (Math.random() < 0.75) {
+                // Angle between 2.8 rad (160 deg) and 5.0 rad (~290 deg)
+                angle = 2.8 + Math.random() * 2.2;
+            } else {
+                angle = Math.random() * Math.PI * 2;
+            }
+
             const size = 0.4 + Math.random() * 0.8;
             const rot = Math.random() * 360;
 
-            // Explosion all over the screen: 
-            // Maximum possible distance to corner is around max innerWidth/innerHeight
             const maxDistance = Math.max(window.innerWidth, window.innerHeight) * 1.2;
             const distance = 150 + Math.random() * maxDistance;
 
-            // To maintain a similar physics feel (velocity), duration is calculated based on distance.
-            // A speed between 150px/sec and 300px/sec will feel natural and consistent.
             const speed = 150 + Math.random() * 150;
             const dur = distance / speed;
 
@@ -147,21 +151,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 y: startY - 12,
                 scale: size * 0.5,
                 rotation: rot,
-                opacity: 1,
+                opacity: 1, // Start fully opaque
                 color: heartColor,
                 position: 'absolute',
                 transformOrigin: '50% 50%',
-                filter: 'drop-shadow(0px 0px 4px rgba(0,0,0,0.1))'
+                filter: 'drop-shadow(0px 0px 6px rgba(0,0,0,0.25))' // Increased shadow for better visibility
             });
 
             heartContainer.appendChild(heart);
             currentHearts++;
 
+            // Movement animation
             gsap.to(heart, {
                 x: startX + Math.cos(angle) * distance,
-                y: startY + Math.sin(angle) * distance - (Math.random() * distance * 0.3), // A little upward float bias
-                rotation: rot + (Math.random() - 0.5) * 720, // More rotation for longer flights
-                opacity: 0,
+                y: startY + Math.sin(angle) * distance - (Math.random() * distance * 0.3),
+                rotation: rot + (Math.random() - 0.5) * 720,
                 scale: size * 1.5,
                 duration: dur,
                 ease: "power2.out",
@@ -170,12 +174,20 @@ document.addEventListener("DOMContentLoaded", () => {
                     currentHearts--;
                 }
             });
+
+            // Opacity fade out animation (stays invisible longer)
+            gsap.to(heart, {
+                opacity: 0,
+                duration: dur * 0.4,
+                delay: dur * 0.6,
+                ease: "power2.in"
+            });
         }
 
         const startSprinkler = () => {
             isLongPress = true;
             spawnHeart();
-            sprinklerInterval = setInterval(spawnHeart, 50); // ~20 hearts/sec
+            sprinklerInterval = setInterval(spawnHeart, 25); // ~40 hearts/sec
         };
 
         const stopSprinkler = () => {
